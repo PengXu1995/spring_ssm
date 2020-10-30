@@ -1,2 +1,2 @@
 # spring_ssm
-spring+springMVC+mybatis
+以spring+springMVC+mybatis为基础，创建web项目
