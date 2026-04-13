@@ -34,7 +34,8 @@ public class LicenseSigningService {
      * Supply {@code license.public.key} in db.properties for production use.
      */
     public static final String DEMO_PUBLIC_KEY;
-    public static final String DEMO_PRIVATE_KEY;
+    /** Package-private: only used by tests and the generate endpoint. Never expose via API. */
+    static final String DEMO_PRIVATE_KEY;
 
     static {
         try {

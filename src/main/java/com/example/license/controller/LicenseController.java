@@ -48,6 +48,9 @@ public class LicenseController {
     }
 
     // ---- GET /api/license/{tenantId}/full-key ----
+    // NOTE: This endpoint returns the unmasked license key. It MUST be protected
+    // by an authentication/authorization layer (e.g., Spring Security, API gateway)
+    // in production deployments. Never expose it to end users directly.
     @GetMapping("/{tenantId}/full-key")
     public ResponseEntity<Map<String, Object>> getFullKey(@PathVariable String tenantId) {
         try {
@@ -135,7 +138,7 @@ public class LicenseController {
         try {
             String privateKeyBase64 = (String) body.get("privateKey");
             if (privateKeyBase64 == null || privateKeyBase64.isBlank()) {
-                privateKeyBase64 = LicenseSigningService.DEMO_PRIVATE_KEY;
+                return error(400, "privateKey is required for license generation");
             }
             LicenseClaims claims = buildClaimsFromRequest(body);
             String token = signingService.signLicense(claims, privateKeyBase64);
