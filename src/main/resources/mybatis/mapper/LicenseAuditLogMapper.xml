@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.license.mapper.LicenseAuditLogMapper">
+
+    <insert id="insert" parameterType="LicenseAuditLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO license_audit_log
+            (operator, operator_ip, old_license_id, new_license_id, action, result, error_msg, created_at)
+        VALUES
+            (#{operator}, #{operatorIp}, #{oldLicenseId}, #{newLicenseId},
+             #{action}, #{result}, #{errorMsg}, #{createdAt})
+    </insert>
+
+    <select id="findRecent" resultType="LicenseAuditLog">
+        SELECT id, operator, operator_ip, old_license_id, new_license_id,
+               action, result, error_msg, created_at
+        FROM license_audit_log
+        ORDER BY created_at DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>
