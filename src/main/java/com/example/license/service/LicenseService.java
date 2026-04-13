@@ -55,11 +55,24 @@ public class LicenseService implements InitializingBean {
     }
 
     /**
-     * Scheduled task: re-validates all licenses every hour.
+     * Scheduled task: re-validates all known tenant licenses every hour and updates their status.
+     * If a license transitions to EXPIRED or REVOKED, the new status is persisted so that the
+     * interceptor picks it up on the next request without needing a full re-parse.
      */
     @Scheduled(fixedDelay = 3600000L)
     public void scheduledValidation() {
+        if (licenseMapper == null) return;
         log.debug("Running scheduled license validation");
+        List<String> tenantIds = licenseMapper.selectAllTenantIds();
+        for (String tid : tenantIds) {
+            try {
+                LicenseInfo info = getCurrentLicense(tid);
+                licenseMapper.updateLicenseStatus(info);
+                log.info("Scheduled validation: tenant={} status={}", tid, info.getStatus());
+            } catch (Exception e) {
+                log.warn("Scheduled validation failed for tenant={}: {}", tid, e.getMessage());
+            }
+        }
     }
 
     /**

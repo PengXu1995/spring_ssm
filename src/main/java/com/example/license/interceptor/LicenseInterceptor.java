@@ -80,9 +80,9 @@ public class LicenseInterceptor implements HandlerInterceptor {
         }
 
         if (status == LicenseStatus.EXPIRING_SOON || status == LicenseStatus.IN_GRACE_PERIOD) {
-            response.setHeader("X-License-Warning", info.getStatusMessage());
-            response.setHeader("X-License-Days-Until-Expiry",
-                    String.valueOf(info.getDaysUntilExpiry()));
+            // License is still active but nearing expiry — allow the request through.
+            // Callers should poll GET /api/license/{tenantId} for expiry details.
+            log.debug("License for tenant={} is {} — request allowed", tenantId, status);
         }
 
         return true;

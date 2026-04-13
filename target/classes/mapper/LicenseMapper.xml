@@ -32,19 +32,24 @@
         VALUES
             (#{claims.tenantId}, #{licenseKey}, #{status}, #{statusMessage}, #{daysUntilExpiry},
              #{lastVerifiedAt}, #{lastError}, #{updatedBy}, #{updatedAt}, #{updaterIp})
+        AS new_row
         ON DUPLICATE KEY UPDATE
-            license_key      = VALUES(license_key),
-            status           = VALUES(status),
-            status_message   = VALUES(status_message),
-            days_until_expiry = VALUES(days_until_expiry),
-            last_verified_at = VALUES(last_verified_at),
-            last_error       = VALUES(last_error),
-            updated_by       = VALUES(updated_by),
-            updated_at       = VALUES(updated_at),
-            updater_ip       = VALUES(updater_ip)
+            license_key      = new_row.license_key,
+            status           = new_row.status,
+            status_message   = new_row.status_message,
+            days_until_expiry = new_row.days_until_expiry,
+            last_verified_at = new_row.last_verified_at,
+            last_error       = new_row.last_error,
+            updated_by       = new_row.updated_by,
+            updated_at       = new_row.updated_at,
+            updater_ip       = new_row.updater_ip
     </insert>
 
-    <update id="updateLicenseStatus" parameterType="com.example.license.model.LicenseInfo">
+    <select id="selectAllTenantIds" resultType="string">
+        SELECT tenant_id FROM license_info
+    </select>
+
+ parameterType="com.example.license.model.LicenseInfo">
         UPDATE license_info
         SET status           = #{status},
             status_message   = #{statusMessage},

@@ -131,17 +131,21 @@ public class LicenseController {
         }
     }
 
-    // ---- POST /api/license/generate ----
+    /**
+     * POST /api/license/generate — signs a LicenseClaims using the server-side demo private key.
+     *
+     * IMPORTANT: In production this endpoint MUST be removed or moved to an isolated
+     * signing service that never shares network access with the application tier.
+     * The private key is held server-side (LicenseSigningService.DEMO_PRIVATE_KEY) and
+     * is NEVER accepted from the request body.
+     */
     @PostMapping("/generate")
     public ResponseEntity<Map<String, Object>> generateLicense(
             @RequestBody Map<String, Object> body) {
         try {
-            String privateKeyBase64 = (String) body.get("privateKey");
-            if (privateKeyBase64 == null || privateKeyBase64.isBlank()) {
-                return error(400, "privateKey is required for license generation");
-            }
             LicenseClaims claims = buildClaimsFromRequest(body);
-            String token = signingService.signLicense(claims, privateKeyBase64);
+            // Private key is always held server-side; it must never come from the request.
+            String token = signingService.signWithDemoKey(claims);
             Map<String, Object> result = new HashMap<>();
             result.put("licenseKey", token);
             result.put("digest", signingService.getTokenDigest(token));

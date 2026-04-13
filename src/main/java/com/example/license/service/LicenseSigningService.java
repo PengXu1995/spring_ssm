@@ -69,6 +69,16 @@ public class LicenseSigningService {
     }
 
     /**
+     * Signs a license using the server-side demo private key.
+     * The private key is NEVER exposed outside this class.
+     * For production use, replace this method to load the private key from a secure vault.
+     */
+    public String signWithDemoKey(LicenseClaims claims) throws LicenseException {
+        return signLicense(claims, DEMO_PRIVATE_KEY);
+    }
+
+
+    /**
      * Signs a LicenseClaims and returns a license token string.
      */
     public String signLicense(LicenseClaims claims, String privateKeyBase64) throws LicenseException {
