@@ -122,7 +122,7 @@ class LicenseValidatorTest {
         // c.maxUsers = 50, 当前 60
         LicenseStatusInfo result = LicenseValidator.validate(c, NOW, 0, 60, -1);
         assertThat(result.getStatus()).isEqualTo(LicenseStatus.INVALID);
-        assertThat(result.getErrorReason()).contains("用户数超出");
+        assertThat(result.getErrorReason()).contains("用户数已超出");
     }
 
     @Test
@@ -132,7 +132,7 @@ class LicenseValidatorTest {
         // c.maxSdkInstances = 5, 当前 8
         LicenseStatusInfo result = LicenseValidator.validate(c, NOW, 0, -1, 8);
         assertThat(result.getStatus()).isEqualTo(LicenseStatus.INVALID);
-        assertThat(result.getErrorReason()).contains("SDK 实例数超出");
+        assertThat(result.getErrorReason()).contains("SDK 实例数已超出");
     }
 
     @Test

@@ -26,7 +26,10 @@ public class LicenseStatusInfo {
     private long maxDailyRecords;
     private List<String> features;
 
-    /** License Key 脱敏展示（前4位 + *** + 后4位） */
+    /**
+     * License Key 展示值：masked 时为脱敏形式（前4位 + *** + 后4位），
+     * full 接口时为明文完整 Key。字段名保持统一以复用同一 DTO。
+     */
     private String maskedLicenseKey;
 
     public static LicenseStatusInfo ofError(LicenseStatus status, String errorReason) {

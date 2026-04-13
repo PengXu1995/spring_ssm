@@ -423,6 +423,7 @@
       ]);
       const info = await maskedResp.json();
       const fullInfo = await fullResp.json();
+      // /full returns the complete unmasked key in maskedLicenseKey field (name from backend DTO)
       currentFullKey = fullInfo.maskedLicenseKey || '';
 
       renderStatus(info);
@@ -656,10 +657,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     loadStatus();
     loadAuditLogs();
-  });
-
-  // Reset update button when key changes
-  document.addEventListener('DOMContentLoaded', () => {
+    // Reset update button when key input changes
     document.getElementById('newLicenseKey').addEventListener('input', () => {
       preValidatedOk = false;
       document.getElementById('updateBtn').disabled = true;

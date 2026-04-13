@@ -17,7 +17,7 @@
             expression="org.springframework.stereotype.Controller"/>
     </context:component-scan>
 
-    <!-- H2 嵌入式数据源 -->
+    <!-- H2 嵌入式数据源（MODE=MySQL 兼容 MySQL 语法，schema.sql 中 AUTO_INCREMENT 与 H2 MySQL 模式兼容） -->
     <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
         <property name="driverClassName" value="org.h2.Driver"/>
         <property name="url" value="jdbc:h2:file:${user.home}/.license_guard/licensedb;AUTO_SERVER=TRUE;MODE=MySQL"/>

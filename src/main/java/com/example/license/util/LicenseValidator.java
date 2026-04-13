@@ -68,15 +68,15 @@ public class LicenseValidator {
             return info;
         }
 
-        // 5. 配额校验
+        // 5. 配额校验（允许恰好等于上限，超出上限才拒绝）
         if (currentUsers >= 0 && claims.getMaxUsers() > 0 && currentUsers > claims.getMaxUsers()) {
             return LicenseStatusInfo.ofError(LicenseStatus.INVALID,
-                    String.format("用户数超出 License 配额：当前 %d，限制 %d",
+                    String.format("用户数已超出 License 配额：当前 %d，上限 %d",
                             currentUsers, claims.getMaxUsers()));
         }
         if (currentSdk >= 0 && claims.getMaxSdkInstances() > 0 && currentSdk > claims.getMaxSdkInstances()) {
             return LicenseStatusInfo.ofError(LicenseStatus.INVALID,
-                    String.format("SDK 实例数超出 License 配额：当前 %d，限制 %d",
+                    String.format("SDK 实例数已超出 License 配额：当前 %d，上限 %d",
                             currentSdk, claims.getMaxSdkInstances()));
         }
 
