@@ -136,10 +136,12 @@ class LicenseServiceTest {
         LicenseClaims claims = buildClaims("T008", false, nowPlusDays(90), 7);
         String token = signingService.signLicense(claims, keyPair.get("privateKey"));
 
-        // Tamper: replace last character of signature part
+        // Tamper: flip a byte in the middle of the signature part so RSA verify rejects it
         String[] parts = token.split("\\.");
-        String tamperedSig = parts[2].substring(0, parts[2].length() - 1) + "X";
-        String tamperedToken = parts[0] + "." + parts[1] + "." + tamperedSig;
+        char[] sigChars = parts[2].toCharArray();
+        // Flip the character at position 10 to something different
+        sigChars[10] = (sigChars[10] == 'A') ? 'B' : 'A';
+        String tamperedToken = parts[0] + "." + parts[1] + "." + new String(sigChars);
 
         LicenseException ex = assertThrows(LicenseException.class,
                 () -> signingService.verifyLicense(tamperedToken, keyPair.get("publicKey")));
