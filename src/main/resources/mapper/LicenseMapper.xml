@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.license.mapper.LicenseMapper">
+
+    <resultMap id="licenseInfoMap" type="com.example.license.model.LicenseInfo">
+        <result property="licenseKey"      column="license_key"/>
+        <result property="status"          column="status"
+                typeHandler="org.apache.ibatis.type.EnumTypeHandler"/>
+        <result property="statusMessage"   column="status_message"/>
+        <result property="daysUntilExpiry" column="days_until_expiry"/>
+        <result property="lastVerifiedAt"  column="last_verified_at"/>
+        <result property="lastError"       column="last_error"/>
+        <result property="updatedBy"       column="updated_by"/>
+        <result property="updatedAt"       column="updated_at"/>
+        <result property="updaterIp"       column="updater_ip"/>
+    </resultMap>
+
+    <select id="selectByTenantId" parameterType="string" resultMap="licenseInfoMap">
+        SELECT license_key, status, status_message, days_until_expiry,
+               last_verified_at, last_error, updated_by, updated_at, updater_ip
+        FROM license_info
+        WHERE tenant_id = #{tenantId}
+        LIMIT 1
+    </select>
+
+    <insert id="insertOrUpdateLicense" parameterType="com.example.license.model.LicenseInfo">
+        INSERT INTO license_info
+            (tenant_id, license_key, status, status_message, days_until_expiry,
+             last_verified_at, last_error, updated_by, updated_at, updater_ip)
+        VALUES
+            (#{claims.tenantId}, #{licenseKey}, #{status}, #{statusMessage}, #{daysUntilExpiry},
+             #{lastVerifiedAt}, #{lastError}, #{updatedBy}, #{updatedAt}, #{updaterIp})
+        ON DUPLICATE KEY UPDATE
+            license_key      = VALUES(license_key),
+            status           = VALUES(status),
+            status_message   = VALUES(status_message),
+            days_until_expiry = VALUES(days_until_expiry),
+            last_verified_at = VALUES(last_verified_at),
+            last_error       = VALUES(last_error),
+            updated_by       = VALUES(updated_by),
+            updated_at       = VALUES(updated_at),
+            updater_ip       = VALUES(updater_ip)
+    </insert>
+
+    <update id="updateLicenseStatus" parameterType="com.example.license.model.LicenseInfo">
+        UPDATE license_info
+        SET status           = #{status},
+            status_message   = #{statusMessage},
+            days_until_expiry = #{daysUntilExpiry},
+            last_verified_at = #{lastVerifiedAt},
+            last_error       = #{lastError}
+        WHERE tenant_id = #{claims.tenantId}
+    </update>
+
+</mapper>
