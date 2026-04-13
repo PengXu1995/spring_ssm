@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="
+           http://www.springframework.org/schema/beans
+               http://www.springframework.org/schema/beans/spring-beans.xsd
+           http://www.springframework.org/schema/context
+               http://www.springframework.org/schema/context/spring-context.xsd
+           http://www.springframework.org/schema/tx
+               http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <!-- Load external database properties -->
+    <context:property-placeholder location="classpath:db.properties" ignore-unresolvable="true"/>
+
+    <!-- HikariCP DataSource -->
+    <bean id="dataSource" class="com.zaxxer.hikari.HikariDataSource" destroy-method="close">
+        <property name="driverClassName" value="${db.driver:com.mysql.cj.jdbc.Driver}"/>
+        <property name="jdbcUrl"         value="${db.url:jdbc:mysql://localhost:3306/license_db?useUnicode=true&amp;characterEncoding=UTF-8&amp;serverTimezone=UTC}"/>
+        <property name="username"        value="${db.username:root}"/>
+        <property name="password"        value="${db.password:}"/>
+        <property name="maximumPoolSize" value="${db.pool.maxSize:20}"/>
+        <property name="minimumIdle"     value="${db.pool.minIdle:5}"/>
+        <property name="connectionTimeout" value="30000"/>
+        <property name="idleTimeout"     value="600000"/>
+        <property name="maxLifetime"     value="1800000"/>
+        <property name="poolName"        value="LicenseHikariPool"/>
+    </bean>
+
+    <!-- MyBatis SqlSessionFactory -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource"            ref="dataSource"/>
+        <property name="mapperLocations"       value="classpath:mapper/*.xml"/>
+        <property name="typeAliasesPackage"    value="com.example.license.model"/>
+        <property name="configurationProperties">
+            <props>
+                <prop key="mapUnderscoreToCamelCase">true</prop>
+                <prop key="cacheEnabled">false</prop>
+                <prop key="lazyLoadingEnabled">false</prop>
+                <prop key="defaultStatementTimeout">30</prop>
+            </props>
+        </property>
+    </bean>
+
+    <!-- Mapper Scanner -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage"      value="com.example.license.mapper"/>
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+    </bean>
+
+    <!-- Transaction Manager -->
+    <bean id="transactionManager"
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"/>
+    </bean>
+
+    <!-- Enable annotation-driven transactions -->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+</beans>

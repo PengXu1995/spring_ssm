@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>License Management Console</title>
+  <!-- Bootstrap 5 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
+  <!-- Vue.js 3 -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
+  <!-- Bootstrap Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <style>
+    :root {
+      --primary:    #4f46e5;
+      --primary-dk: #3730a3;
+      --success:    #059669;
+      --warning:    #d97706;
+      --danger:     #dc2626;
+      --info:       #0891b2;
+      --muted:      #6b7280;
+      --surface:    #ffffff;
+      --bg:         #f1f5f9;
+      --border:     #e2e8f0;
+      --text:       #1e293b;
+      --text-light: #64748b;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 0.93rem;
+    }
+
+    /* ── Top bar ── */
+    .topbar {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dk) 100%);
+      color: #fff;
+      padding: 1rem 1.5rem;
+      box-shadow: 0 2px 8px rgba(79,70,229,.35);
+    }
+    .topbar h1 { font-size: 1.35rem; font-weight: 700; margin: 0; }
+    .topbar .subtitle { font-size: .8rem; opacity: .8; margin-top: .15rem; }
+
+    /* ── Cards ── */
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      background: var(--surface);
+      transition: box-shadow .2s;
+    }
+    .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+    .card-header {
+      background: transparent;
+      border-bottom: 1px solid var(--border);
+      padding: .85rem 1.25rem;
+      border-radius: 12px 12px 0 0 !important;
+      display: flex; align-items: center; gap: .6rem;
+    }
+    .card-header .icon {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .85rem;
+    }
+    .card-header h5 { font-size: .95rem; font-weight: 600; margin: 0; }
+
+    /* ── Status badge ── */
+    .status-badge {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .35rem .9rem; border-radius: 20px; font-weight: 600; font-size: .82rem;
+    }
+    .status-badge .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .badge-valid       { background: #d1fae5; color: #065f46; }
+    .badge-valid .dot  { background: #059669; animation: pulse-green 2s infinite; }
+    .badge-expiring    { background: #fef3c7; color: #92400e; }
+    .badge-expiring .dot { background: #d97706; animation: pulse-amber 2s infinite; }
+    .badge-grace       { background: #fff7ed; color: #9a3412; }
+    .badge-grace .dot  { background: #ea580c; }
+    .badge-expired     { background: #fee2e2; color: #991b1b; }
+    .badge-expired .dot{ background: #dc2626; }
+    .badge-revoked     { background: #f3e8ff; color: #6b21a8; }
+    .badge-revoked .dot{ background: #9333ea; }
+    .badge-invalid     { background: #fee2e2; color: #991b1b; }
+    .badge-invalid .dot{ background: #dc2626; }
+    .badge-unconfigured{ background: #f1f5f9; color: #475569; }
+    .badge-unconfigured .dot { background: #94a3b8; }
+
+    @keyframes pulse-green {
+      0%,100% { box-shadow: 0 0 0 0 rgba(5,150,105,.5); }
+      50%      { box-shadow: 0 0 0 5px rgba(5,150,105,0); }
+    }
+    @keyframes pulse-amber {
+      0%,100% { box-shadow: 0 0 0 0 rgba(217,119,6,.5); }
+      50%      { box-shadow: 0 0 0 5px rgba(217,119,6,0); }
+    }
+
+    /* ── Countdown ring ── */
+    .countdown-ring { display: inline-flex; align-items: center; gap: 1rem; }
+    .ring-wrap { position: relative; width: 80px; height: 80px; }
+    .ring-wrap svg { transform: rotate(-90deg); }
+    .ring-bg   { fill: none; stroke: var(--border); stroke-width: 6; }
+    .ring-fill { fill: none; stroke-width: 6; stroke-linecap: round;
+                 transition: stroke-dashoffset .6s ease; }
+    .ring-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+                 text-align: center; line-height: 1.1; }
+    .ring-text .days { font-size: 1.25rem; font-weight: 700; }
+    .ring-text .lbl  { font-size: .6rem; color: var(--text-light); text-transform: uppercase; letter-spacing: .05em; }
+
+    /* ── License key display ── */
+    .license-key-box {
+      background: #f8fafc; border: 1px solid var(--border);
+      border-radius: 8px; padding: .65rem 1rem;
+      font-family: 'Courier New', monospace; font-size: .78rem;
+      word-break: break-all; line-height: 1.6;
+      position: relative; min-height: 58px;
+    }
+    .key-masked { color: var(--text-light); letter-spacing: .05em; }
+    .key-full   { color: var(--text); }
+
+    /* ── Feature badges ── */
+    .feature-badge {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .28rem .7rem; border-radius: 6px; font-size: .78rem; font-weight: 500;
+      margin: .2rem;
+    }
+    .feat-active  { background: #ede9fe; color: #5b21b6; border: 1px solid #c4b5fd; }
+    .feat-inactive{ background: #f1f5f9; color: var(--text-light); border: 1px solid var(--border);
+                    text-decoration: line-through; }
+
+    /* ── Detail grid ── */
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem 1rem; }
+    @media(max-width:576px) { .detail-grid { grid-template-columns: 1fr; } }
+    .detail-item label { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+                          color: var(--text-light); font-weight: 600; display: block; margin-bottom: .1rem; }
+    .detail-item span  { font-size: .88rem; font-weight: 500; }
+
+    /* ── Limit bar ── */
+    .limit-bar { background: var(--border); border-radius: 4px; height: 6px; overflow: hidden; }
+    .limit-fill{ height: 100%; border-radius: 4px; transition: width .5s ease; }
+
+    /* ── Audit table ── */
+    .audit-table th { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+                       color: var(--text-light); font-weight: 600; border-bottom: 2px solid var(--border); }
+    .audit-table td { font-size: .82rem; vertical-align: middle; border-color: var(--border); }
+    .result-success { color: var(--success); font-weight: 600; }
+    .result-failure { color: var(--danger);  font-weight: 600; }
+
+    /* ── Form ── */
+    .key-textarea { font-family: 'Courier New', monospace; font-size: .78rem;
+                     min-height: 120px; resize: vertical; }
+    .validate-feedback { font-size: .8rem; margin-top: .3rem; }
+
+    /* ── Alert banner ── */
+    .license-alert { border-radius: 8px; padding: .75rem 1rem; margin-bottom: 1rem;
+                      display: flex; align-items: flex-start; gap: .6rem; font-size: .85rem; }
+    .license-alert .alert-icon { font-size: 1.1rem; margin-top: .05rem; flex-shrink: 0; }
+
+    /* ── Env chip ── */
+    .env-chip { display: inline-block; padding: .2rem .65rem; border-radius: 20px;
+                 font-size: .75rem; font-weight: 600; letter-spacing: .04em; }
+    .env-prod  { background: #dcfce7; color: #166534; }
+    .env-stg   { background: #fef9c3; color: #854d0e; }
+    .env-dev   { background: #dbeafe; color: #1e3a8a; }
+    .env-trial { background: #fce7f3; color: #9d174d; }
+
+    /* ── Spinner overlay ── */
+    .spinner-overlay {
+      position: absolute; inset: 0; background: rgba(255,255,255,.7);
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 12px; z-index: 10;
+    }
+
+    /* ── Misc ── */
+    .section-title { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em;
+                      color: var(--text-light); font-weight: 700; margin-bottom: .75rem; }
+    .btn-icon { width: 32px; height: 32px; padding: 0; display: inline-flex;
+                 align-items: center; justify-content: center; border-radius: 7px; }
+    .copy-btn:active { transform: scale(.95); }
+    .mock-banner { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px;
+                    padding: .5rem 1rem; font-size: .8rem; color: #92400e; }
+    .tag { display: inline-block; background: #e0e7ff; color: #3730a3;
+            font-size: .72rem; padding: .1rem .45rem; border-radius: 4px; font-weight: 600; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+    .fade-in { animation: fadeIn .3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; }
+    .toast-msg {
+      background: #1e293b; color: #fff; padding: .7rem 1.1rem;
+      border-radius: 10px; margin-top: .5rem; font-size: .85rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,.25);
+      display: flex; align-items: center; gap: .6rem;
+      animation: slideUp .3s ease;
+    }
+    .toast-msg.toast-success i { color: #34d399; }
+    .toast-msg.toast-error   i { color: #f87171; }
+    .toast-msg.toast-warn    i { color: #fbbf24; }
+    @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+  </style>
+</head>
+<body>
+
+<!-- ══ Top Bar ══ -->
+<div class="topbar d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div>
+    <h1><i class="fa-solid fa-shield-halved me-2"></i>License Management Console</h1>
+    <div class="subtitle">Data Desensitization Platform · Tenant Administration</div>
+  </div>
+  <div class="d-flex align-items-center gap-2 flex-wrap">
+    <span class="tag">v1.0.0</span>
+    <div id="app-tenant-badge" class="d-flex align-items-center gap-1"
+         style="background:rgba(255,255,255,.15);border-radius:20px;padding:.3rem .9rem;">
+      <i class="fa-solid fa-building" style="font-size:.8rem;"></i>
+      <span style="font-size:.82rem;font-weight:600;" id="topbar-tenant">DEMO_TENANT_001</span>
+    </div>
+    <button class="btn btn-sm btn-light" onclick="app.refreshAll()" title="Refresh">
+      <i class="fa-solid fa-rotate-right"></i>
+    </button>
+  </div>
+</div>
+
+<!-- ══ App ══ -->
+<div id="app" class="container-xl py-4" style="max-width:1280px;">
+
+  <!-- Mock data banner -->
+  <div v-if="mockMode" class="mock-banner mb-3 d-flex align-items-center gap-2">
+    <i class="fa-solid fa-flask-vial"></i>
+    <strong>Demo Mode</strong> — displaying mock data. Connect to
+    <code>/api/license/DEMO_TENANT_001</code> for live data.
+    <button class="btn btn-xs btn-warning ms-auto" style="font-size:.75rem;padding:.2rem .6rem;"
+            @click="mockMode=false;refreshAll()">
+      <i class="fa-solid fa-plug me-1"></i>Connect Live
+    </button>
+  </div>
+
+  <!-- Alert banners -->
+  <transition name="fade">
+    <div v-if="licenseAlert" :class="['license-alert', licenseAlert.cls]">
+      <i :class="['alert-icon fa-solid', licenseAlert.icon]"></i>
+      <div>
+        <strong>{{ licenseAlert.title }}</strong>
+        <div>{{ licenseAlert.body }}</div>
+      </div>
+      <button class="btn-close ms-auto" style="font-size:.7rem;" @click="licenseAlert=null"></button>
+    </div>
+  </transition>
+
+  <div class="row g-3">
+
+    <!-- ══ LEFT COLUMN ══ -->
+    <div class="col-lg-8">
+
+      <!-- Status Card -->
+      <div class="card mb-3 position-relative" style="overflow:hidden;">
+        <div v-if="loading.status" class="spinner-overlay">
+          <div class="spinner-border text-primary" role="status"></div>
+        </div>
+        <div class="card-header">
+          <div class="icon" style="background:#ede9fe;color:#6d28d9;">
+            <i class="fa-solid fa-certificate"></i>
+          </div>
+          <h5>License Status</h5>
+          <div class="ms-auto d-flex gap-2 align-items-center">
+            <span class="text-muted" style="font-size:.75rem;">Tenant:&nbsp;</span>
+            <input v-model="tenantId" class="form-control form-control-sm"
+                   style="width:180px;font-size:.8rem;" @keyup.enter="refreshAll"/>
+            <button class="btn btn-sm btn-outline-primary" @click="refreshAll">
+              <i class="fa-solid fa-magnifying-glass me-1"></i>Load
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row align-items-center g-3">
+            <div class="col-sm-auto text-center">
+              <!-- Countdown ring -->
+              <div class="ring-wrap">
+                <svg width="80" height="80" viewBox="0 0 80 80">
+                  <circle class="ring-bg" cx="40" cy="40" r="35"/>
+                  <circle class="ring-fill" cx="40" cy="40" r="35"
+                          :stroke="ringColor"
+                          :stroke-dasharray="ringDash"
+                          :stroke-dashoffset="ringOffset"/>
+                </svg>
+                <div class="ring-text">
+                  <div class="days" :style="{color:ringColor}">
+                    {{ daysDisplay }}
+                  </div>
+                  <div class="lbl">{{ license.status === 'NOT_CONFIGURED' ? 'N/A' : 'days' }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="mb-2">
+                <span :class="['status-badge', statusBadgeClass]">
+                  <span class="dot"></span>
+                  {{ statusLabel }}
+                </span>
+              </div>
+              <div class="text-muted mb-2" style="font-size:.85rem;">{{ license.statusMessage }}</div>
+              <div class="d-flex flex-wrap gap-3" style="font-size:.82rem;color:var(--text-light);">
+                <span v-if="license.lastVerifiedAt">
+                  <i class="fa-regular fa-clock me-1"></i>
+                  Verified {{ formatRelative(license.lastVerifiedAt) }}
+                </span>
+                <span v-if="license.claims && license.claims.licenseType">
+                  <i class="fa-solid fa-tag me-1"></i>{{ license.claims.licenseType }}
+                </span>
+                <span v-if="license.claims && license.claims.issuer">
+                  <i class="fa-solid fa-building-columns me-1"></i>{{ license.claims.issuer }}
+                </span>
+              </div>
+            </div>
+            <div class="col-sm-auto d-flex flex-column gap-2">
+              <button class="btn btn-sm btn-outline-primary" @click="verifyLicense"
+                      :disabled="loading.verify">
+                <span v-if="loading.verify" class="spinner-border spinner-border-sm me-1"></span>
+                <i v-else class="fa-solid fa-shield-check me-1"></i>Verify Now
+              </button>
+              <button class="btn btn-sm btn-outline-danger" @click="showRevokeModal"
+                      :disabled="!hasLicense">
+                <i class="fa-solid fa-ban me-1"></i>Revoke
+              </button>
+            </div>
+          </div>
+
+          <!-- Error alert -->
+          <div v-if="license.lastError" class="alert alert-danger py-2 mt-3 mb-0" style="font-size:.82rem;">
+            <i class="fa-solid fa-triangle-exclamation me-2"></i>
+            {{ license.lastError }}
+          </div>
+        </div>
+      </div>
+
+      <!-- License Key Card -->
+      <div class="card mb-3 position-relative">
+        <div class="card-header">
+          <div class="icon" style="background:#dbeafe;color:#1d4ed8;">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <h5>License Key</h5>
+        </div>
+        <div class="card-body">
+          <div v-if="!hasLicense" class="text-center py-3 text-muted">
+            <i class="fa-solid fa-key fa-2x mb-2 d-block opacity-30"></i>
+            No license key configured
+          </div>
+          <div v-else>
+            <div class="license-key-box mb-2 fade-in">
+              <span :class="showFullKey ? 'key-full' : 'key-masked'">
+                {{ showFullKey ? license.licenseKey : maskedKey }}
+              </span>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <button class="btn btn-sm btn-outline-secondary" @click="toggleKey">
+                <i :class="['fa-solid', showFullKey ? 'fa-eye-slash' : 'fa-eye', 'me-1']"></i>
+                {{ showFullKey ? 'Hide Key' : 'Show Key' }}
+              </button>
+              <button class="btn btn-sm btn-outline-secondary copy-btn" @click="copyKey">
+                <i class="fa-regular fa-copy me-1"></i>Copy
+              </button>
+              <div class="alert alert-warning py-1 px-2 mb-0 ms-auto" style="font-size:.75rem;border-radius:6px;">
+                <i class="fa-solid fa-lock me-1"></i>
+                Treat this key as a secret — do not share publicly
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- License Details -->
+      <div class="card mb-3" v-if="license.claims && license.claims.licenseId">
+        <div class="card-header">
+          <div class="icon" style="background:#dcfce7;color:#166534;">
+            <i class="fa-solid fa-circle-info"></i>
+          </div>
+          <h5>License Details</h5>
+        </div>
+        <div class="card-body">
+          <div class="detail-grid mb-3">
+            <div class="detail-item">
+              <label>License ID</label>
+              <span class="font-monospace" style="font-size:.8rem;">{{ license.claims.licenseId }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Tenant</label>
+              <span>{{ license.claims.tenantName }} <span class="text-muted">({{ license.claims.tenantId }})</span></span>
+            </div>
+            <div class="detail-item">
+              <label>Issued At</label>
+              <span>{{ formatEpoch(license.claims.issuedAt) }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Expires At</label>
+              <span :style="{ color: expiryColor }">
+                {{ license.claims.expiresAt === -1 ? 'Perpetual (Never)' : formatEpoch(license.claims.expiresAt) }}
+              </span>
+            </div>
+            <div class="detail-item">
+              <label>Grace Period</label>
+              <span>{{ license.claims.gracePeriodDays }} days</span>
+            </div>
+            <div class="detail-item">
+              <label>Environment</label>
+              <span :class="['env-chip', envChipClass]">{{ license.claims.environment }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Hard Limit</label>
+              <span>
+                <i :class="license.claims.hardLimit
+                    ? 'fa-solid fa-circle-xmark text-danger'
+                    : 'fa-solid fa-circle-check text-success'" class="me-1"></i>
+                {{ license.claims.hardLimit ? 'Enforced' : 'Soft (warnings only)' }}
+              </span>
+            </div>
+            <div class="detail-item">
+              <label>Revoked</label>
+              <span>
+                <i :class="license.claims.revoked
+                    ? 'fa-solid fa-ban text-danger'
+                    : 'fa-solid fa-check text-success'" class="me-1"></i>
+                {{ license.claims.revoked ? 'Yes — ' + (license.claims.revokedReason||'') : 'No' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Capacity limits -->
+          <div class="section-title mt-3">Capacity Limits</div>
+          <div class="row g-2">
+            <div class="col-sm-6 col-md-4" v-for="lim in capacityLimits" :key="lim.key">
+              <div class="p-2 rounded" style="background:#f8fafc;border:1px solid var(--border);">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                  <span style="font-size:.75rem;color:var(--text-light);">{{ lim.label }}</span>
+                  <span style="font-size:.82rem;font-weight:600;">{{ lim.value }}</span>
+                </div>
+                <div class="limit-bar">
+                  <div class="limit-fill" :style="{width: lim.pct+'%', background: lim.color}"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features -->
+      <div class="card mb-3" v-if="license.claims && license.claims.features">
+        <div class="card-header">
+          <div class="icon" style="background:#fef3c7;color:#92400e;">
+            <i class="fa-solid fa-puzzle-piece"></i>
+          </div>
+          <h5>Authorized Features</h5>
+          <span class="ms-auto tag">{{ (license.claims.features||[]).length }} / {{ allFeatures.length }}</span>
+        </div>
+        <div class="card-body">
+          <span v-for="feat in allFeatures" :key="feat"
+                :class="['feature-badge', isFeatureEnabled(feat) ? 'feat-active' : 'feat-inactive']">
+            <i :class="['fa-solid', isFeatureEnabled(feat) ? 'fa-check-circle' : 'fa-times-circle']"></i>
+            {{ feat }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Environment & Restrictions -->
+      <div class="card mb-3" v-if="license.claims">
+        <div class="card-header">
+          <div class="icon" style="background:#e0f2fe;color:#0369a1;">
+            <i class="fa-solid fa-globe"></i>
+          </div>
+          <h5>Environment &amp; Restrictions</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <div class="section-title">Allowed Domains</div>
+              <div v-if="license.claims.allowedDomains && license.claims.allowedDomains.length">
+                <span v-for="d in license.claims.allowedDomains" :key="d"
+                      class="badge bg-light text-dark border me-1 mb-1"
+                      style="font-size:.78rem;font-family:monospace;">{{ d }}</span>
+              </div>
+              <div v-else class="text-muted" style="font-size:.82rem;">
+                <i class="fa-solid fa-earth-americas me-1"></i>All domains allowed
+              </div>
+            </div>
+            <div class="col-sm-6">
+              <div class="section-title">Host Binding</div>
+              <div v-if="license.claims.hostId" class="font-monospace" style="font-size:.82rem;">
+                <i class="fa-solid fa-server me-1 text-muted"></i>{{ license.claims.hostId }}
+              </div>
+              <div v-else class="text-muted" style="font-size:.82rem;">
+                <i class="fa-solid fa-lock-open me-1"></i>Not host-bound
+              </div>
+            </div>
+            <div class="col-12" v-if="license.updatedBy">
+              <div class="section-title">Last Updated</div>
+              <div style="font-size:.82rem;color:var(--text-light);">
+                <i class="fa-solid fa-user-pen me-1"></i>
+                By <strong>{{ license.updatedBy }}</strong>
+                from <code>{{ license.updaterIp }}</code>
+                at {{ license.updatedAt }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /LEFT -->
+
+    <!-- ══ RIGHT COLUMN ══ -->
+    <div class="col-lg-4">
+
+      <!-- Update License -->
+      <div class="card mb-3 position-relative">
+        <div v-if="loading.update" class="spinner-overlay">
+          <div class="spinner-border text-primary" role="status"></div>
+        </div>
+        <div class="card-header">
+          <div class="icon" style="background:#f0fdf4;color:#16a34a;">
+            <i class="fa-solid fa-upload"></i>
+          </div>
+          <h5>Update License</h5>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.83rem;">
+              <i class="fa-solid fa-key me-1 text-muted"></i>New License Key
+            </label>
+            <textarea v-model="updateForm.licenseKey"
+                      class="form-control key-textarea"
+                      placeholder="Paste your license key here...
+Format: header.claims.signature"
+                      @input="validateKeyFormat"
+                      :class="keyValidClass"></textarea>
+            <div :class="['validate-feedback', keyFeedbackClass]" v-if="keyFeedback">
+              <i :class="keyFeedbackIcon" class="me-1"></i>{{ keyFeedback }}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.83rem;">
+              <i class="fa-solid fa-user me-1 text-muted"></i>Operator ID
+            </label>
+            <input v-model="updateForm.operatorId" class="form-control form-control-sm"
+                   placeholder="admin"/>
+          </div>
+          <button class="btn btn-primary w-100" @click="submitUpdate"
+                  :disabled="!updateForm.licenseKey.trim() || loading.update">
+            <i class="fa-solid fa-cloud-arrow-up me-2"></i>Update License
+          </button>
+          <div class="mt-2">
+            <div class="alert alert-info py-2 mb-0" style="font-size:.75rem;border-radius:8px;">
+              <i class="fa-solid fa-circle-info me-1"></i>
+              The new key will be verified before activation. Only keys signed with the configured
+              public key are accepted.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Generate (Demo) -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <div class="icon" style="background:#fdf4ff;color:#9333ea;">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+          </div>
+          <h5>Generate Demo License</h5>
+          <span class="ms-auto badge bg-warning text-dark" style="font-size:.7rem;">Dev Only</span>
+        </div>
+        <div class="card-body">
+          <div class="mb-2">
+            <label class="form-label" style="font-size:.8rem;">License Type</label>
+            <select v-model="genForm.licenseType" class="form-select form-select-sm">
+              <option>TRIAL</option>
+              <option>SUBSCRIPTION</option>
+              <option>ENTERPRISE</option>
+              <option>PERPETUAL</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label" style="font-size:.8rem;">Validity (days)</label>
+            <input type="number" v-model.number="genForm.validityDays"
+                   class="form-control form-control-sm" min="1" max="3650"/>
+          </div>
+          <div class="mb-2">
+            <label class="form-label" style="font-size:.8rem;">Max Users</label>
+            <input type="number" v-model.number="genForm.maxUsers"
+                   class="form-control form-control-sm" min="1"/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.8rem;">Features</label>
+            <div class="d-flex flex-wrap gap-1">
+              <label v-for="f in allFeatures" :key="f"
+                     class="d-flex align-items-center gap-1"
+                     style="font-size:.76rem;cursor:pointer;">
+                <input type="checkbox" :value="f" v-model="genForm.features"/>
+                {{ f }}
+              </label>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-purple w-100"
+                  style="border-color:#9333ea;color:#9333ea;"
+                  @click="generateLicense" :disabled="loading.generate">
+            <span v-if="loading.generate" class="spinner-border spinner-border-sm me-1"></span>
+            <i v-else class="fa-solid fa-wand-magic-sparkles me-1"></i>Generate &amp; Preview
+          </button>
+
+          <!-- Generated key preview -->
+          <div v-if="generatedKey" class="mt-3 fade-in">
+            <div class="section-title">Generated Key</div>
+            <div class="license-key-box mb-2" style="font-size:.72rem;max-height:100px;overflow-y:auto;">
+              {{ generatedKey }}
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-sm btn-outline-secondary flex-fill" @click="copyGenerated">
+                <i class="fa-regular fa-copy me-1"></i>Copy
+              </button>
+              <button class="btn btn-sm btn-success flex-fill" @click="applyGenerated">
+                <i class="fa-solid fa-check me-1"></i>Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick stats -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <div class="icon" style="background:#fff7ed;color:#c2410c;">
+            <i class="fa-solid fa-chart-bar"></i>
+          </div>
+          <h5>Quick Stats</h5>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush" style="border-radius:0 0 12px 12px;">
+            <li class="list-group-item d-flex justify-content-between align-items-center"
+                style="font-size:.83rem;">
+              <span><i class="fa-solid fa-users me-2 text-muted"></i>Max Users</span>
+              <strong>{{ license.claims && license.claims.maxUsers != null ? license.claims.maxUsers : '—' }}</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center"
+                style="font-size:.83rem;">
+              <span><i class="fa-solid fa-bolt me-2 text-muted"></i>Max Concurrent</span>
+              <strong>{{ license.claims && license.claims.maxConcurrent != null ? license.claims.maxConcurrent : '—' }}</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center"
+                style="font-size:.83rem;">
+              <span><i class="fa-solid fa-list-check me-2 text-muted"></i>Max Tasks</span>
+              <strong>{{ license.claims && license.claims.maxTasks != null ? license.claims.maxTasks : '—' }}</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center"
+                style="font-size:.83rem;">
+              <span><i class="fa-solid fa-database me-2 text-muted"></i>Max Data Sources</span>
+              <strong>{{ license.claims && license.claims.maxDataSources != null ? license.claims.maxDataSources : '—' }}</strong>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center"
+                style="font-size:.83rem;">
+              <span><i class="fa-solid fa-plug me-2 text-muted"></i>Max SDK Instances</span>
+              <strong>{{ license.claims && license.claims.maxSdkInstances != null ? license.claims.maxSdkInstances : '—' }}</strong>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+    </div><!-- /RIGHT -->
+  </div><!-- /row -->
+
+  <!-- ══ Audit Log ══ -->
+  <div class="card mb-4 position-relative">
+    <div v-if="loading.audit" class="spinner-overlay">
+      <div class="spinner-border text-primary" role="status"></div>
+    </div>
+    <div class="card-header">
+      <div class="icon" style="background:#f0f9ff;color:#0369a1;">
+        <i class="fa-solid fa-scroll"></i>
+      </div>
+      <h5>Audit Log</h5>
+      <span class="ms-auto text-muted" style="font-size:.78rem;">
+        Page {{ auditPage }} · {{ auditLogs.length }} records
+      </span>
+      <button class="btn btn-sm btn-outline-secondary ms-2" @click="loadAuditLogs">
+        <i class="fa-solid fa-rotate-right"></i>
+      </button>
+    </div>
+    <div class="card-body p-0">
+      <div v-if="auditLogs.length === 0" class="text-center py-5 text-muted">
+        <i class="fa-solid fa-scroll fa-2x mb-2 d-block opacity-30"></i>
+        No audit log entries found
+      </div>
+      <div v-else class="table-responsive">
+        <table class="table mb-0 audit-table">
+          <thead>
+            <tr>
+              <th class="ps-3">Time</th>
+              <th>Action</th>
+              <th>Operator</th>
+              <th>IP</th>
+              <th>Result</th>
+              <th>Old Digest</th>
+              <th class="pe-3">New Digest</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="log in auditLogs" :key="log.id" class="fade-in">
+              <td class="ps-3" style="white-space:nowrap;">{{ formatDate(log.createdAt) }}</td>
+              <td>
+                <span class="badge" :class="actionBadgeClass(log.action)"
+                      style="font-size:.74rem;">{{ log.action }}</span>
+              </td>
+              <td>{{ log.operatorId || '—' }}</td>
+              <td><code style="font-size:.75rem;">{{ log.operatorIp || '—' }}</code></td>
+              <td>
+                <span :class="log.result === 'SUCCESS' ? 'result-success' : 'result-failure'">
+                  <i :class="log.result === 'SUCCESS'
+                      ? 'fa-solid fa-circle-check'
+                      : 'fa-solid fa-circle-xmark'" class="me-1"></i>
+                  {{ log.result }}
+                </span>
+                <div v-if="log.errorMessage" class="text-danger" style="font-size:.72rem;">
+                  {{ log.errorMessage }}
+                </div>
+              </td>
+              <td><code style="font-size:.7rem;">{{ abbrev(log.oldLicenseDigest) }}</code></td>
+              <td class="pe-3"><code style="font-size:.7rem;">{{ abbrev(log.newLicenseDigest) }}</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="d-flex justify-content-center align-items-center gap-2 py-3 border-top">
+        <button class="btn btn-sm btn-outline-secondary" :disabled="auditPage<=1"
+                @click="auditPage--;loadAuditLogs()">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <span style="font-size:.82rem;color:var(--text-light);">Page {{ auditPage }}</span>
+        <button class="btn btn-sm btn-outline-secondary" :disabled="auditLogs.length < auditPageSize"
+                @click="auditPage++;loadAuditLogs()">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ══ Revoke Modal ══ -->
+<div class="modal fade" id="revokeModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-danger">
+          <i class="fa-solid fa-ban me-2"></i>Revoke License
+        </h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="revoke-modal-body">
+        <div class="alert alert-danger py-2 mb-3" style="font-size:.83rem;">
+          <i class="fa-solid fa-triangle-exclamation me-2"></i>
+          This action immediately disables this license. It cannot be undone without issuing a new key.
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Revocation Reason</label>
+          <textarea id="revoke-reason" class="form-control" rows="3"
+                    placeholder="Describe why this license is being revoked..."></textarea>
+        </div>
+        <div>
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Operator ID</label>
+          <input id="revoke-operator" class="form-control form-control-sm" value="admin"/>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-danger" id="confirm-revoke-btn" onclick="app.confirmRevoke()">
+          <i class="fa-solid fa-ban me-1"></i>Confirm Revoke
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Toast Container ══ -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+const { createApp, ref, computed, onMounted } = Vue;
+
+// ── Mock data for demo mode ──
+const MOCK_LICENSE = {
+  licenseKey: "eyJhbGciOiJSUzI1NiIsInR5cCI6IkxJQ0VOU0UifQ****dGVzdA",
+  status: "VALID",
+  statusMessage: "License is valid",
+  daysUntilExpiry: 82,
+  lastVerifiedAt: new Date(Date.now() - 3600000).toISOString(),
+  lastError: null,
+  updatedBy: "admin",
+  updatedAt: "2024-01-15T08:30:00Z",
+  updaterIp: "192.168.1.100",
+  claims: {
+    licenseId: "lic-demo-001-abcdef",
+    tenantId: "DEMO_TENANT_001",
+    tenantName: "Acme Corp (Demo)",
+    licenseType: "SUBSCRIPTION",
+    issuedAt: Math.floor(Date.now()/1000) - 86400*10,
+    expiresAt: Math.floor(Date.now()/1000) + 86400*82,
+    gracePeriodDays: 7,
+    maxUsers: 200,
+    maxConcurrent: 50,
+    maxTasks: 10000,
+    maxDataSources: 20,
+    maxSdkInstances: 5,
+    features: ["VIDEO_DESENSITIZE","IMAGE_DESENSITIZE","TEXT_DESENSITIZE","API","AUDIT","BATCH"],
+    environment: "PRODUCTION",
+    allowedDomains: ["acme.example.com","admin.acme.example.com"],
+    hostId: null,
+    hardLimit: false,
+    revoked: false,
+    revokedReason: null,
+    issuer: "com.example.license"
+  }
+};
+
+const MOCK_AUDIT = [
+  { id:1, tenantId:"DEMO_TENANT_001", action:"UPDATE_LICENSE", operatorId:"admin", operatorIp:"192.168.1.100",
+    oldLicenseDigest:"a1b2c3d4e5f6789012345678901234567890abcdef01234567890abcdef012345",
+    newLicenseDigest:"f6e5d4c3b2a1098765432109876543210fedcba9876543210fedcba9876543210",
+    result:"SUCCESS", errorMessage:null, createdAt:"2024-01-15T08:30:00Z" },
+  { id:2, tenantId:"DEMO_TENANT_001", action:"VERIFY_LICENSE", operatorId:"SYSTEM", operatorIp:null,
+    oldLicenseDigest:null, newLicenseDigest:null,
+    result:"SUCCESS", errorMessage:null, createdAt:"2024-01-14T12:00:00Z" },
+  { id:3, tenantId:"DEMO_TENANT_001", action:"UPDATE_LICENSE", operatorId:"ops-user",operatorIp:"10.0.0.55",
+    oldLicenseDigest:"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+    newLicenseDigest:"a1b2c3d4e5f6789012345678901234567890abcdef01234567890abcdef012345",
+    result:"FAILURE", errorMessage:"Invalid signature — token has been tampered with",
+    createdAt:"2024-01-10T16:45:00Z" },
+  { id:4, tenantId:"DEMO_TENANT_001", action:"VERIFY_LICENSE", operatorId:"SYSTEM", operatorIp:null,
+    oldLicenseDigest:null, newLicenseDigest:null,
+    result:"SUCCESS", errorMessage:null, createdAt:"2024-01-09T08:00:00Z" }
+];
+
+const ALL_FEATURES = [
+  "VIDEO_DESENSITIZE","IMAGE_DESENSITIZE","TEXT_DESENSITIZE",
+  "DATABASE_DESENSITIZE","API","AUDIT","BATCH","SDK","EXPORT","WATERMARK"
+];
+
+const app = createApp({
+  setup() {
+    const tenantId    = ref("DEMO_TENANT_001");
+    const mockMode    = ref(true);
+    const license     = ref({});
+    const auditLogs   = ref([]);
+    const auditPage   = ref(1);
+    const auditPageSize = 20;
+    const showFullKey = ref(false);
+    const generatedKey = ref("");
+    const licenseAlert = ref(null);
+    const loading     = ref({ status:false, verify:false, update:false, audit:false, generate:false });
+
+    const updateForm  = ref({ licenseKey:"", operatorId:"admin" });
+    const genForm     = ref({
+      licenseType:"SUBSCRIPTION", validityDays:90, maxUsers:100,
+      features:["VIDEO_DESENSITIZE","IMAGE_DESENSITIZE","TEXT_DESENSITIZE","API","AUDIT"]
+    });
+    const keyFeedback = ref("");
+    const keyFeedbackType = ref(""); // success | error | info
+
+    const allFeatures = ALL_FEATURES;
+
+    // ── Computed ──
+    const hasLicense = computed(() =>
+      license.value.status && license.value.status !== "NOT_CONFIGURED"
+    );
+
+    const statusLabel = computed(() => {
+      const map = {
+        VALID:"Valid", EXPIRING_SOON:"Expiring Soon", IN_GRACE_PERIOD:"Grace Period",
+        EXPIRED:"Expired", REVOKED:"Revoked", CLOCK_TAMPERED:"Clock Tampered",
+        INVALID_SIGNATURE:"Invalid Signature", NOT_CONFIGURED:"Not Configured"
+      };
+      return map[license.value.status] || license.value.status || "Unknown";
+    });
+
+    const statusBadgeClass = computed(() => {
+      const map = {
+        VALID:"badge-valid", EXPIRING_SOON:"badge-expiring", IN_GRACE_PERIOD:"badge-grace",
+        EXPIRED:"badge-expired", REVOKED:"badge-revoked", CLOCK_TAMPERED:"badge-invalid",
+        INVALID_SIGNATURE:"badge-invalid", NOT_CONFIGURED:"badge-unconfigured"
+      };
+      return map[license.value.status] || "badge-unconfigured";
+    });
+
+    const ringColor = computed(() => {
+      const map = {
+        VALID:"#059669", EXPIRING_SOON:"#d97706", IN_GRACE_PERIOD:"#ea580c",
+        EXPIRED:"#dc2626", REVOKED:"#9333ea", NOT_CONFIGURED:"#94a3b8"
+      };
+      return map[license.value.status] || "#94a3b8";
+    });
+
+    const daysDisplay = computed(() => {
+      const d = license.value.daysUntilExpiry;
+      if (!d && d !== 0) return "—";
+      if (d === Number.MAX_SAFE_INTEGER || d > 9999) return "∞";
+      return d < 0 ? Math.abs(d) : d;
+    });
+
+    const ringDash = computed(() => {
+      const r = 35;
+      return (2 * Math.PI * r).toFixed(1);
+    });
+
+    const ringOffset = computed(() => {
+      const circumference = 2 * Math.PI * 35;
+      const days = license.value.daysUntilExpiry;
+      if (!days || days <= 0) return circumference;
+      const max = 365;
+      const pct = Math.min(days / max, 1);
+      return (circumference * (1 - pct)).toFixed(1);
+    });
+
+    const expiryColor = computed(() => {
+      const s = license.value.status;
+      if (s === "EXPIRED") return "#dc2626";
+      if (s === "EXPIRING_SOON") return "#d97706";
+      if (s === "IN_GRACE_PERIOD") return "#ea580c";
+      return "inherit";
+    });
+
+    const maskedKey = computed(() => {
+      const k = license.value.licenseKey;
+      if (!k) return "";
+      if (k.includes("****")) return k;
+      if (k.length <= 12) return "•".repeat(k.length);
+      return k.substring(0,8) + " •••• [MASKED] •••• " + k.substring(k.length-4);
+    });
+
+    const envChipClass = computed(() => {
+      const env = (license.value.claims||{}).environment || "";
+      if (env.includes("PROD")) return "env-prod";
+      if (env.includes("STG") || env.includes("STAGING")) return "env-stg";
+      if (env.includes("DEV")) return "env-dev";
+      if (env.includes("TRIAL")) return "env-trial";
+      return "env-dev";
+    });
+
+    const capacityLimits = computed(() => {
+      const c = license.value.claims;
+      if (!c) return [];
+      const max = Math.max(c.maxUsers, c.maxConcurrent, c.maxTasks/100, c.maxDataSources*5, c.maxSdkInstances*10, 1);
+      return [
+        { key:"users",       label:"Max Users",        value:c.maxUsers,         pct:Math.min(c.maxUsers/500*100,100),         color:"#6d28d9" },
+        { key:"concurrent",  label:"Max Concurrent",   value:c.maxConcurrent,    pct:Math.min(c.maxConcurrent/200*100,100),    color:"#0891b2" },
+        { key:"tasks",       label:"Max Tasks",        value:c.maxTasks,         pct:Math.min(c.maxTasks/50000*100,100),       color:"#059669" },
+        { key:"datasources", label:"Max Data Sources", value:c.maxDataSources,   pct:Math.min(c.maxDataSources/100*100,100),   color:"#d97706" },
+        { key:"sdk",         label:"Max SDK Instances",value:c.maxSdkInstances,  pct:Math.min(c.maxSdkInstances/20*100,100),  color:"#dc2626" },
+      ];
+    });
+
+    const keyValidClass = computed(() => {
+      if (!updateForm.value.licenseKey.trim()) return "";
+      return keyFeedbackType.value === "success" ? "is-valid"
+           : keyFeedbackType.value === "error"   ? "is-invalid" : "";
+    });
+
+    const keyFeedbackClass = computed(() =>
+      keyFeedbackType.value === "success" ? "text-success"
+    : keyFeedbackType.value === "error"   ? "text-danger" : "text-muted"
+    );
+
+    const keyFeedbackIcon = computed(() =>
+      keyFeedbackType.value === "success" ? "fa-solid fa-circle-check"
+    : keyFeedbackType.value === "error"   ? "fa-solid fa-circle-xmark"
+    : "fa-solid fa-circle-info"
+    );
+
+    // ── Methods ──
+    function isFeatureEnabled(feat) {
+      return (license.value.claims && license.value.claims.features || []).includes(feat);
+    }
+
+    function validateKeyFormat() {
+      const k = updateForm.value.licenseKey.trim();
+      if (!k) { keyFeedback.value = ""; keyFeedbackType.value = ""; return; }
+      const parts = k.split(".");
+      if (parts.length === 3 && parts.every(p => p.length > 0)) {
+        keyFeedback.value = "Format looks valid (3-part token detected)";
+        keyFeedbackType.value = "success";
+      } else {
+        keyFeedback.value = "Invalid format — expected header.claims.signature (3 parts separated by '.')";
+        keyFeedbackType.value = "error";
+      }
+    }
+
+    function toggleKey() { showFullKey.value = !showFullKey.value; }
+
+    function copyKey() {
+      const key = showFullKey.value ? license.value.licenseKey : maskedKey.value;
+      if (!key) return;
+      navigator.clipboard.writeText(license.value.licenseKey || key)
+        .then(() => toast("success", "License key copied to clipboard"))
+        .catch(() => toast("error", "Copy failed — please copy manually"));
+    }
+
+    function copyGenerated() {
+      if (!generatedKey.value) return;
+      navigator.clipboard.writeText(generatedKey.value)
+        .then(() => toast("success","Generated key copied"))
+        .catch(() => toast("error","Copy failed"));
+    }
+
+    function applyGenerated() {
+      updateForm.value.licenseKey = generatedKey.value;
+      validateKeyFormat();
+      toast("info", "Key pasted into update form — review and submit");
+    }
+
+    function abbrev(s) {
+      if (!s) return "—";
+      return s.substring(0,8) + "…" + s.substring(s.length-6);
+    }
+
+    function formatEpoch(epoch) {
+      if (!epoch) return "—";
+      return new Date(epoch * 1000).toLocaleDateString("en-US",
+        { year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
+    }
+
+    function formatDate(dt) {
+      if (!dt) return "—";
+      return new Date(dt).toLocaleDateString("en-US",
+        { year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
+    }
+
+    function formatRelative(dt) {
+      if (!dt) return "";
+      const diff = Math.round((Date.now() - new Date(dt).getTime()) / 1000);
+      if (diff < 60)   return "just now";
+      if (diff < 3600) return Math.floor(diff/60) + "m ago";
+      if (diff < 86400)return Math.floor(diff/3600) + "h ago";
+      return Math.floor(diff/86400) + "d ago";
+    }
+
+    function actionBadgeClass(action) {
+      if (!action) return "bg-secondary";
+      if (action.includes("UPDATE")) return "bg-primary";
+      if (action.includes("REVOKE")) return "bg-danger";
+      if (action.includes("VERIFY")) return "bg-success";
+      return "bg-secondary";
+    }
+
+    function updateLicenseAlert() {
+      const s = license.value.status;
+      if (s === "EXPIRING_SOON") {
+        licenseAlert.value = {
+          cls:"alert alert-warning", icon:"fa-clock",
+          title:"License Expiring Soon",
+          body:`This license expires in ${license.value.daysUntilExpiry} days. Please renew it to avoid service interruption.`
+        };
+      } else if (s === "IN_GRACE_PERIOD") {
+        licenseAlert.value = {
+          cls:"alert alert-warning", icon:"fa-hourglass-half",
+          title:"License in Grace Period",
+          body:"Your license has expired but is still active during the grace period. Please update immediately."
+        };
+      } else if (s === "EXPIRED") {
+        licenseAlert.value = {
+          cls:"alert alert-danger", icon:"fa-triangle-exclamation",
+          title:"License Expired",
+          body:"The license has expired. API access is blocked until a valid license is installed."
+        };
+      } else if (s === "REVOKED") {
+        licenseAlert.value = {
+          cls:"alert alert-danger", icon:"fa-ban",
+          title:"License Revoked",
+          body:`License was revoked. Reason: ${license.value.claims && license.value.claims.revokedReason || 'N/A'}`
+        };
+      } else if (s === "NOT_CONFIGURED") {
+        licenseAlert.value = {
+          cls:"alert alert-secondary", icon:"fa-circle-info",
+          title:"No License Configured",
+          body:"Install a valid license key to activate this tenant."
+        };
+      } else {
+        licenseAlert.value = null;
+      }
+    }
+
+    // ── API calls ──
+    async function apiGet(url) {
+      if (mockMode.value) return null;
+      const res = await fetch(url, { headers:{ "Content-Type":"application/json" } });
+      const body = await res.json();
+      if (body.code !== 0) throw new Error(body.message || "API error");
+      return body.data;
+    }
+
+    async function apiPost(url, data) {
+      if (mockMode.value) return null;
+      const res = await fetch(url, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(data)
+      });
+      const body = await res.json();
+      if (body.code !== 0) throw new Error(body.message || "API error");
+      return body.data;
+    }
+
+    async function apiPut(url, data) {
+      if (mockMode.value) return null;
+      const res = await fetch(url, {
+        method:"PUT", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify(data)
+      });
+      const body = await res.json();
+      if (body.code !== 0) throw new Error(body.message || "API error");
+      return body.data;
+    }
+
+    async function loadLicense() {
+      loading.value.status = true;
+      try {
+        if (mockMode.value) {
+          await delay(400);
+          license.value = JSON.parse(JSON.stringify(MOCK_LICENSE));
+        } else {
+          const data = await apiGet(`/api/license/${tenantId.value}`);
+          license.value = data || {};
+        }
+        updateLicenseAlert();
+      } catch(e) {
+        toast("error", "Failed to load license: " + e.message);
+      } finally {
+        loading.value.status = false;
+      }
+    }
+
+    async function loadAuditLogs() {
+      loading.value.audit = true;
+      try {
+        if (mockMode.value) {
+          await delay(300);
+          auditLogs.value = MOCK_AUDIT;
+        } else {
+          const data = await apiGet(
+            `/api/license/${tenantId.value}/audit?page=${auditPage.value}&pageSize=${auditPageSize}`
+          );
+          auditLogs.value = data || [];
+        }
+      } catch(e) {
+        toast("error", "Failed to load audit logs: " + e.message);
+      } finally {
+        loading.value.audit = false;
+      }
+    }
+
+    async function refreshAll() {
+      await Promise.all([loadLicense(), loadAuditLogs()]);
+    }
+
+    async function verifyLicense() {
+      loading.value.verify = true;
+      try {
+        if (mockMode.value) {
+          await delay(600);
+          license.value.lastVerifiedAt = new Date().toISOString();
+          toast("success", "License verified successfully");
+        } else {
+          const data = await apiPost(`/api/license/${tenantId.value}/verify`, {});
+          if (data) license.value = data;
+          toast("success", "License verified: " + (data && data.statusMessage || "OK"));
+        }
+        updateLicenseAlert();
+      } catch(e) {
+        toast("error", "Verification failed: " + e.message);
+      } finally {
+        loading.value.verify = false;
+      }
+    }
+
+    async function submitUpdate() {
+      if (!updateForm.value.licenseKey.trim()) {
+        toast("error","Please enter a license key"); return;
+      }
+      loading.value.update = true;
+      try {
+        if (mockMode.value) {
+          await delay(800);
+          // Simulate demo: accept any 3-part token
+          const parts = updateForm.value.licenseKey.trim().split(".");
+          if (parts.length !== 3) throw new Error("Invalid format — must have 3 parts");
+          license.value.licenseKey = updateForm.value.licenseKey.trim();
+          license.value.status = "VALID";
+          license.value.statusMessage = "License updated (demo mode)";
+          license.value.updatedBy = updateForm.value.operatorId;
+          license.value.updatedAt = new Date().toISOString();
+          license.value.lastVerifiedAt = new Date().toISOString();
+          updateForm.value.licenseKey = "";
+          keyFeedback.value = "";
+          updateLicenseAlert();
+          toast("success","License updated successfully (demo)");
+        } else {
+          const data = await apiPut(`/api/license/${tenantId.value}`, {
+            licenseKey: updateForm.value.licenseKey.trim(),
+            operatorId: updateForm.value.operatorId
+          });
+          if (data) license.value = data;
+          updateForm.value.licenseKey = "";
+          keyFeedback.value = "";
+          updateLicenseAlert();
+          toast("success","License updated successfully");
+        }
+        await loadAuditLogs();
+      } catch(e) {
+        toast("error","Update failed: " + e.message);
+      } finally {
+        loading.value.update = false;
+      }
+    }
+
+    function showRevokeModal() {
+      const modal = new bootstrap.Modal(document.getElementById("revokeModal"));
+      modal.show();
+    }
+
+    async function confirmRevoke() {
+      const reason = document.getElementById("revoke-reason").value.trim();
+      const operatorId = document.getElementById("revoke-operator").value.trim();
+      if (!reason) { toast("error","Please provide a revocation reason"); return; }
+      const modal = bootstrap.Modal.getInstance(document.getElementById("revokeModal"));
+      modal && modal.hide();
+      try {
+        if (mockMode.value) {
+          await delay(500);
+          license.value.status = "REVOKED";
+          license.value.statusMessage = "License revoked: " + reason;
+          if (license.value.claims) {
+            license.value.claims.revoked = true;
+            license.value.claims.revokedReason = reason;
+          }
+          updateLicenseAlert();
+          toast("warn","License revoked (demo mode)");
+        } else {
+          await apiPost(`/api/license/${tenantId.value}/revoke`, { reason, operatorId });
+          await loadLicense();
+          toast("warn","License revoked");
+        }
+        await loadAuditLogs();
+      } catch(e) {
+        toast("error","Revocation failed: " + e.message);
+      }
+    }
+
+    async function generateLicense() {
+      loading.value.generate = true;
+      try {
+        const now = Math.floor(Date.now()/1000);
+        const payload = {
+          tenantId: tenantId.value,
+          tenantName: "Demo Tenant",
+          licenseType: genForm.value.licenseType,
+          expiresAt: genForm.value.licenseType === "PERPETUAL" ? -1
+                     : now + genForm.value.validityDays * 86400,
+          gracePeriodDays: 7,
+          maxUsers: genForm.value.maxUsers,
+          maxConcurrent: 50,
+          maxTasks: 10000,
+          maxDataSources: 20,
+          maxSdkInstances: 5,
+          features: genForm.value.features,
+          environment: "PRODUCTION"
+        };
+        if (mockMode.value) {
+          await delay(700);
+          // Generate a fake token for demo
+          const headerB64 = btoa(JSON.stringify({alg:"RS256",typ:"LICENSE"}))
+            .replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+          const claimsB64 = btoa(JSON.stringify({
+            ...payload,
+            licenseId: "demo-" + Math.random().toString(36).substring(2),
+            issuedAt: now, issuer: "com.example.license", revoked: false
+          })).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+          const fakeSig = btoa("DEMO_SIGNATURE_" + Math.random().toString(36).substring(2))
+            .replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+          generatedKey.value = `${headerB64}.${claimsB64}.${fakeSig}`;
+          toast("success","Demo license token generated");
+        } else {
+          const data = await apiPost("/api/license/generate", payload);
+          if (data) generatedKey.value = data.licenseKey;
+          toast("success","License generated");
+        }
+      } catch(e) {
+        toast("error","Generation failed: " + e.message);
+      } finally {
+        loading.value.generate = false;
+      }
+    }
+
+    // ── Toast utility ──
+    function toast(type, message) {
+      const container = document.getElementById("toast-container");
+      const el = document.createElement("div");
+      const iconMap = { success:"fa-circle-check", error:"fa-circle-xmark", warn:"fa-triangle-exclamation", info:"fa-circle-info" };
+      el.className = `toast-msg toast-${type}`;
+      el.innerHTML = `<i class="fa-solid ${iconMap[type]||'fa-info-circle'}"></i>${message}`;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity="0"; el.style.transition="opacity .3s";
+        setTimeout(()=>el.remove(), 300);
+      }, 3500);
+    }
+
+    function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    onMounted(() => {
+      refreshAll();
+    });
+
+    return {
+      tenantId, mockMode, license, auditLogs, auditPage, auditPageSize,
+      showFullKey, generatedKey, licenseAlert, loading,
+      updateForm, genForm, keyFeedback, keyFeedbackType,
+      allFeatures,
+      // computed
+      hasLicense, statusLabel, statusBadgeClass,
+      ringColor, daysDisplay, ringDash, ringOffset,
+      expiryColor, maskedKey, envChipClass, capacityLimits,
+      keyValidClass, keyFeedbackClass, keyFeedbackIcon,
+      // methods
+      isFeatureEnabled, validateKeyFormat, toggleKey, copyKey, copyGenerated, applyGenerated,
+      abbrev, formatEpoch, formatDate, formatRelative, actionBadgeClass,
+      loadLicense, loadAuditLogs, refreshAll, verifyLicense,
+      submitUpdate, showRevokeModal, confirmRevoke, generateLicense
+    };
+  }
+}).mount("#app");
+
+// Expose for inline handlers
+window.app = app;
+</script>
+</body>
+</html>
